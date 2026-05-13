@@ -71,7 +71,7 @@ Be specific, not generic. Reference actual details from both the job and the res
 Return ONLY the letter text, no header, no date, no address block."""
 
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-pro")
     response = model.generate_content(prompt)
     return {"cover_letter": response.text.strip()}
 

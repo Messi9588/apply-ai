@@ -36,7 +36,7 @@ def _parse_with_gemini(text: str) -> dict:
     if not GEMINI_API_KEY:
         return {"raw": text, "error": "No GEMINI_API_KEY set — AI parsing disabled"}
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-pro")
     prompt = f"""Extract structured information from this resume and return ONLY valid JSON with these fields:
 {{
   "name": "",
