@@ -1,20 +1,32 @@
 import os
 import json
+import requests
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db, Resume
-import google.generativeai as genai
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
+
+def _call_gemini(prompt: str) -> str:
+    r = requests.post(
+        GEMINI_URL,
+        params={"key": GEMINI_API_KEY},
+        json={"contents": [{"parts": [{"text": prompt}]}]},
+        timeout=60,
+    )
+    r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
 class CoverLetterRequest(BaseModel):
     listing_title: str
     listing_org: str
-    listing_type: str  # job | scholarship
+    listing_type: str
     listing_description: str
     listing_requirements: str = ""
     listing_amount: str = ""
@@ -70,10 +82,11 @@ Write a 3-4 paragraph cover letter that:
 Be specific, not generic. Reference actual details from both the job and the resume.
 Return ONLY the letter text, no header, no date, no address block."""
 
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-pro")
-    response = model.generate_content(prompt)
-    return {"cover_letter": response.text.strip()}
+    try:
+        letter = _call_gemini(prompt)
+    except Exception as e:
+        raise HTTPException(500, f"Gemini error: {str(e)}")
+    return {"cover_letter": letter}
 
 
 class FormFillRequest(BaseModel):
