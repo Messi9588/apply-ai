@@ -2,14 +2,15 @@ import json
 import os
 import io
 import tempfile
+import requests
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database import get_db, Resume
-import google.generativeai as genai
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 UPLOADS_DIR = "/app/uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
@@ -35,8 +36,6 @@ def _extract_text_docx(data: bytes) -> str:
 def _parse_with_gemini(text: str) -> dict:
     if not GEMINI_API_KEY:
         return {"raw": text, "error": "No GEMINI_API_KEY set — AI parsing disabled"}
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-pro")
     prompt = f"""Extract structured information from this resume and return ONLY valid JSON with these fields:
 {{
   "name": "",
@@ -56,8 +55,14 @@ def _parse_with_gemini(text: str) -> dict:
 
 Resume text:
 {text[:6000]}"""
-    response = model.generate_content(prompt)
-    raw = response.text.strip()
+    r = requests.post(
+        GEMINI_URL,
+        params={"key": GEMINI_API_KEY},
+        json={"contents": [{"parts": [{"text": prompt}]}]},
+        timeout=60,
+    )
+    r.raise_for_status()
+    raw = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
