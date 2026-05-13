@@ -63,7 +63,10 @@ export default function SearchPage() {
       setCoverLetter(clRes.data.cover_letter)
       setFormFields(ffRes.data.fields)
     } catch (e) {
-      setCoverLetter(e.response?.data?.detail?.includes('resume') ? '⚠ Upload a resume first to generate a cover letter.' : 'AI generation failed — check that GEMINI_API_KEY is set in your .env file.')
+      const detail = e.response?.data?.detail || ''
+      if (detail.includes('resume')) setCoverLetter('⚠ Upload a resume first to generate a cover letter.')
+      else if (detail.includes('429') || detail.includes('quota') || detail.includes('rate')) setCoverLetter('⚠ Gemini rate limit hit — wait 60 seconds and try again.')
+      else setCoverLetter(`⚠ AI generation failed: ${detail || e.message}`)
     } finally {
       setAiLoading(false)
     }
