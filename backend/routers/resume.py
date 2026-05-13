@@ -55,19 +55,22 @@ def _parse_with_gemini(text: str) -> dict:
 
 Resume text:
 {text[:6000]}"""
-    r = requests.post(
-        GEMINI_URL,
-        params={"key": GEMINI_API_KEY},
-        json={"contents": [{"parts": [{"text": prompt}]}]},
-        timeout=60,
-    )
-    r.raise_for_status()
-    raw = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw)
+    try:
+        r = requests.post(
+            GEMINI_URL,
+            params={"key": GEMINI_API_KEY},
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=60,
+        )
+        r.raise_for_status()
+        raw = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return json.loads(raw)
+    except Exception as e:
+        return {"raw": text[:500], "error": f"AI parsing failed: {str(e)[:200]}"}
 
 
 @router.post("/upload")
