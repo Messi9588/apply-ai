@@ -63,7 +63,7 @@ export default function SearchPage() {
       setCoverLetter(clRes.data.cover_letter)
       setFormFields(ffRes.data.fields)
     } catch (e) {
-      setCoverLetter(e.response?.data?.detail?.includes('resume') ? '⚠ Upload a resume first to generate a cover letter.' : 'AI generation failed — check ANTHROPIC_API_KEY.')
+      setCoverLetter(e.response?.data?.detail?.includes('resume') ? '⚠ Upload a resume first to generate a cover letter.' : 'AI generation failed — check that GEMINI_API_KEY is set in your .env file.')
     } finally {
       setAiLoading(false)
     }
