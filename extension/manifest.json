@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "ApplyAI Auto-Fill",
+  "version": "1.0",
+  "description": "Auto-fills job and scholarship applications using your ApplyAI profile and AI-generated cover letters.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ApplyAI"
+  }
+}

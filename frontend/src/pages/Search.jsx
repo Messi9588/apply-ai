@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { searchListings, getAllScholarships, generateCoverLetter, generateFormData, saveApplication } from '../api/client'
+import { searchListings, getAllScholarships, generateCoverLetter, generateFormData, saveApplication, setPendingFill } from '../api/client'
 import { Search, Briefcase, GraduationCap, MapPin, DollarSign, Calendar, ExternalLink, Sparkles, BookmarkPlus, Copy, Check, ChevronDown, ChevronUp, Loader } from 'lucide-react'
 
 const TYPE_COLORS = {
@@ -84,7 +84,20 @@ export default function SearchPage() {
         cover_letter: coverLetter,
       })
       setSaved(true)
-      if (status === 'applied') window.open(selected.url, '_blank')
+      if (status === 'applied') {
+        // Queue data for browser extension auto-fill
+        if (formFields) {
+          await setPendingFill({
+            listing_title: selected.title,
+            listing_org: selected.organization,
+            listing_type: selected.listing_type,
+            listing_url: selected.url,
+            cover_letter: coverLetter,
+            fields: formFields,
+          }).catch(() => {})
+        }
+        window.open(selected.url, '_blank')
+      }
     } catch (e) { }
   }
 

@@ -19,6 +19,10 @@ export const getAllScholarships = () => api.get('/listings/scholarships')
 export const generateCoverLetter = (data) => api.post('/ai/cover-letter', data)
 export const generateFormData = (data) => api.post('/ai/form-fill', data)
 
+// Pending fill for browser extension
+export const setPendingFill = (data) => api.post('/pending-fill', data)
+export const clearPendingFill = () => api.delete('/pending-fill')
+
 // Applications
 export const saveApplication = (data) => api.post('/applications/', data)
 export const getApplications = () => api.get('/applications/')
