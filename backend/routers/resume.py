@@ -5,11 +5,11 @@ import tempfile
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database import get_db, Resume
-import anthropic
+import google.generativeai as genai
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 UPLOADS_DIR = "/app/uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
@@ -32,10 +32,11 @@ def _extract_text_docx(data: bytes) -> str:
         os.unlink(tmp)
 
 
-def _parse_with_claude(text: str) -> dict:
-    if not ANTHROPIC_API_KEY:
-        return {"raw": text, "error": "No ANTHROPIC_API_KEY set — AI parsing disabled"}
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+def _parse_with_gemini(text: str) -> dict:
+    if not GEMINI_API_KEY:
+        return {"raw": text, "error": "No GEMINI_API_KEY set — AI parsing disabled"}
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = f"""Extract structured information from this resume and return ONLY valid JSON with these fields:
 {{
   "name": "",
@@ -55,13 +56,8 @@ def _parse_with_claude(text: str) -> dict:
 
 Resume text:
 {text[:6000]}"""
-    msg = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1500,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    raw = msg.content[0].text.strip()
-    # Strip markdown code fences if present
+    response = model.generate_content(prompt)
+    raw = response.text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -80,14 +76,12 @@ async def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_
     else:
         raise HTTPException(400, "Only PDF and DOCX files are supported")
 
-    # Save file
     dest = os.path.join(UPLOADS_DIR, name)
     with open(dest, "wb") as f:
         f.write(data)
 
-    parsed = _parse_with_claude(text)
+    parsed = _parse_with_gemini(text)
 
-    # Replace existing resume (single-user app)
     db.query(Resume).delete()
     resume = Resume(filename=name, raw_text=text, parsed_json=json.dumps(parsed))
     db.add(resume)

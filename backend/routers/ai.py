@@ -4,11 +4,11 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db, Resume
-import anthropic
+import google.generativeai as genai
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 
 class CoverLetterRequest(BaseModel):
@@ -22,8 +22,8 @@ class CoverLetterRequest(BaseModel):
 
 @router.post("/cover-letter")
 def generate_cover_letter(req: CoverLetterRequest, db: Session = Depends(get_db)):
-    if not ANTHROPIC_API_KEY:
-        raise HTTPException(503, "ANTHROPIC_API_KEY not configured")
+    if not GEMINI_API_KEY:
+        raise HTTPException(503, "GEMINI_API_KEY not configured")
     resume = db.query(Resume).order_by(Resume.created_at.desc()).first()
     if not resume:
         raise HTTPException(400, "Upload a resume first")
@@ -70,14 +70,10 @@ Write a 3-4 paragraph cover letter that:
 Be specific, not generic. Reference actual details from both the job and the resume.
 Return ONLY the letter text, no header, no date, no address block."""
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    msg = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    letter = msg.content[0].text.strip()
-    return {"cover_letter": letter}
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(prompt)
+    return {"cover_letter": response.text.strip()}
 
 
 class FormFillRequest(BaseModel):
@@ -88,7 +84,6 @@ class FormFillRequest(BaseModel):
 
 @router.post("/form-fill")
 def generate_form_data(req: FormFillRequest, db: Session = Depends(get_db)):
-    """Return common form fields pre-filled from the resume profile."""
     resume = db.query(Resume).order_by(Resume.created_at.desc()).first()
     if not resume:
         raise HTTPException(400, "Upload a resume first")
