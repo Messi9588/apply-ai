@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+sqlalchemy
+anthropic
+aiofiles
+PyPDF2
+python-docx
+requests
+pydantic
